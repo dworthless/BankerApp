@@ -2,6 +2,63 @@ import { GolfCourse } from '../types';
 
 export const BUILT_IN_COURSES: GolfCourse[] = [
   {
+    id: 'arborlinks',
+    name: 'Arborlinks Golf Course',
+    location: 'Nebraska City, NE',
+    clubName: 'Arborlinks',
+    numHoles: 18,
+    tees: [
+      {
+        name: 'Black Tees',
+        rating: 75.4,
+        slope: 141,
+        yardage: 7222,
+        pars: [5, 4, 3, 5, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4],
+        handicapRanks: [12, 14, 18, 2, 8, 16, 10, 4, 6, 11, 15, 7, 13, 17, 1, 5, 3, 9],
+      },
+      {
+        name: 'White Tees',
+        rating: 73.5,
+        slope: 138,
+        yardage: 6807,
+        pars: [5, 4, 3, 5, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4],
+        handicapRanks: [12, 14, 18, 2, 8, 16, 10, 4, 6, 11, 15, 7, 13, 17, 1, 5, 3, 9],
+      },
+      {
+        name: 'Member Tees',
+        rating: 72.1,
+        slope: 135,
+        yardage: 6497,
+        pars: [5, 4, 3, 5, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4],
+        handicapRanks: [12, 14, 18, 2, 8, 16, 10, 4, 6, 11, 15, 7, 13, 17, 1, 5, 3, 9],
+      },
+      {
+        name: 'Green Tees',
+        rating: 71.5,
+        slope: 132,
+        yardage: 6320,
+        pars: [5, 4, 3, 5, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4],
+        handicapRanks: [12, 14, 18, 2, 8, 16, 10, 4, 6, 11, 15, 7, 13, 17, 1, 5, 3, 9],
+      },
+      {
+        name: 'Yellow Tees',
+        rating: 69.7,
+        slope: 122,
+        yardage: 5809,
+        pars: [5, 4, 3, 5, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4],
+        handicapRanks: [12, 14, 18, 2, 8, 16, 10, 4, 6, 11, 15, 7, 13, 17, 1, 5, 3, 9],
+      },
+      {
+        name: 'Red Tees',
+        rating: 71.2,
+        slope: 119,
+        yardage: 5136,
+        pars: [5, 4, 3, 5, 4, 3, 4, 4, 4, 5, 3, 4, 4, 3, 4, 5, 4, 4],
+        handicapRanks: [12, 14, 18, 2, 8, 16, 10, 4, 6, 11, 15, 7, 13, 17, 1, 5, 3, 9],
+      },
+    ],
+  },
+  {
     id: 'pebble-beach',
     name: 'Pebble Beach Golf Links',
     location: 'Pebble Beach, CA',

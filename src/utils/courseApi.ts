@@ -1,11 +1,17 @@
-import { GolfCourse } from '../types';
+import { GolfCourse, CourseTeeBox } from '../types';
 import { BUILT_IN_COURSES } from './courseDatabase';
 
 const API_KEY_STORAGE_KEY = 'banker_golf_course_api_key';
 
 export function getStoredApiKey(): string {
   try {
-    return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+    const saved = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (saved && saved.trim().length > 0) {
+      return saved.trim();
+    }
+    // Check environment variable if available
+    const envKey = (import.meta as any).env?.VITE_GOLF_COURSE_API_KEY;
+    return typeof envKey === 'string' ? envKey.trim() : '';
   } catch {
     return '';
   }
@@ -74,8 +80,86 @@ export function generateSmartCourse(name: string, location = 'Custom Course'): G
   };
 }
 
+// In-memory cache for fetched course details
+const courseDetailsCache: Record<string, GolfCourse> = {};
+
 /**
- * Live search across built-in courses + optional Golf Course API integration
+ * Fetch full scorecard details for a specific course ID from GolfCourseAPI
+ */
+export async function fetchGolfCourseDetails(courseId: string, apiKey: string): Promise<GolfCourse | null> {
+  if (courseDetailsCache[courseId]) {
+    return courseDetailsCache[courseId];
+  }
+
+  try {
+    const res = await fetch(`https://api.golfcourseapi.com/v1/courses/${courseId}`, {
+      headers: {
+        Authorization: `Key ${apiKey}`,
+      },
+    });
+
+    if (!res.ok) {
+      console.warn(`GolfCourseAPI details returned status ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const c = data.course;
+    if (!c) return null;
+
+    const allTees: CourseTeeBox[] = [];
+
+    // Parse male tees
+    if (c.tees?.male && Array.isArray(c.tees.male)) {
+      c.tees.male.forEach((t: any) => {
+        if (t.holes && Array.isArray(t.holes)) {
+          allTees.push({
+            name: `${t.tee_name || 'Men'}`,
+            rating: t.course_rating,
+            slope: t.slope_rating,
+            yardage: t.total_yards,
+            pars: t.holes.map((h: any) => h.par || 4),
+            handicapRanks: t.holes.map((h: any, idx: number) => h.handicap || idx + 1),
+          });
+        }
+      });
+    }
+
+    // Parse female tees
+    if (c.tees?.female && Array.isArray(c.tees.female)) {
+      c.tees.female.forEach((t: any) => {
+        if (t.holes && Array.isArray(t.holes)) {
+          allTees.push({
+            name: `${t.tee_name || 'Women'}`,
+            rating: t.course_rating,
+            slope: t.slope_rating,
+            yardage: t.total_yards,
+            pars: t.holes.map((h: any) => h.par || 4),
+            handicapRanks: t.holes.map((h: any, idx: number) => h.handicap || idx + 1),
+          });
+        }
+      });
+    }
+
+    const fullCourse: GolfCourse = {
+      id: c.id,
+      name: c.course_name || c.club_name,
+      clubName: c.club_name,
+      location: `${c.location?.city || ''}, ${c.location?.state || ''} ${c.location?.country || ''}`.trim(),
+      numHoles: 18,
+      tees: allTees.length > 0 ? allTees : generateSmartCourse(c.course_name).tees,
+    };
+
+    courseDetailsCache[courseId] = fullCourse;
+    return fullCourse;
+  } catch (err) {
+    console.error('Failed to fetch GolfCourseAPI details:', err);
+    return null;
+  }
+}
+
+/**
+ * Live search across built-in courses + Golf Course API integration
  */
 export async function searchGolfCourses(
   query: string,
@@ -89,16 +173,15 @@ export async function searchGolfCourses(
     ? BUILT_IN_COURSES.filter((c) => matchesQuery(c, cleanQuery))
     : BUILT_IN_COURSES;
 
-  // 2. If API Key is present, query Golf Course API (RapidAPI / Golf-Course-API)
-  if (apiKey && cleanQuery.length >= 3) {
+  // 2. Query Golf Course API (api.golfcourseapi.com)
+  if (apiKey && cleanQuery.length >= 2) {
     try {
       const response = await fetch(
-        `https://golf-course-api.p.rapidapi.com/courses?search=${encodeURIComponent(cleanQuery)}`,
+        `https://api.golfcourseapi.com/v1/search?search_query=${encodeURIComponent(cleanQuery)}`,
         {
           method: 'GET',
           headers: {
-            'x-rapidapi-key': apiKey,
-            'x-rapidapi-host': 'golf-course-api.p.rapidapi.com',
+            Authorization: `Key ${apiKey}`,
           },
         }
       );
@@ -106,35 +189,48 @@ export async function searchGolfCourses(
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data.courses) && data.courses.length > 0) {
-          const apiCourses: GolfCourse[] = data.courses.map((item: any, idx: number) => {
-            const tees = (item.tees || []).map((t: any) => ({
-              name: t.name || `Tee ${idx + 1}`,
-              rating: t.rating || 72.0,
-              slope: t.slope || 125,
-              yardage: t.yardage || 6500,
-              pars: t.pars || [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 5, 4, 4, 3, 5, 4, 4],
-              handicapRanks:
-                t.handicapRanks || [7, 3, 15, 1, 11, 5, 17, 9, 13, 8, 16, 2, 10, 6, 18, 4, 14, 12],
-            }));
+          // Fetch detailed scorecards for the top 5 matches in parallel
+          const topCourses = data.courses.slice(0, 5);
+          const detailedPromises = topCourses.map(async (item: any) => {
+            const detailed = await fetchGolfCourseDetails(item.id, apiKey);
+            if (detailed) return detailed;
 
             return {
-              id: `api_${item.id || idx}`,
-              name: item.name || cleanQuery,
-              location: `${item.city || ''}, ${item.state || ''} ${item.country || ''}`.trim(),
-              clubName: item.club_name || item.name,
-              numHoles: item.num_holes || 18,
-              tees: tees.length > 0 ? tees : generateSmartCourse(item.name || cleanQuery).tees,
+              id: item.id,
+              name: item.course_name || item.club_name,
+              clubName: item.club_name,
+              location: `${item.location?.city || ''}, ${item.location?.state || ''} ${item.location?.country || ''}`.trim(),
+              numHoles: 18,
+              tees: generateSmartCourse(item.course_name || item.club_name).tees,
             };
           });
 
-          // Combine with local matches avoiding duplicates by name
-          const existingNames = new Set(localMatches.map((c) => c.name.toLowerCase()));
-          const filteredApi = apiCourses.filter((c) => !existingNames.has(c.name.toLowerCase()));
-          return [...localMatches, ...filteredApi];
+          const apiResults = await Promise.all(detailedPromises);
+          const validApi = apiResults.filter(Boolean) as GolfCourse[];
+
+          // Combine with local matches avoiding duplicates
+          const seenIds = new Set<string>();
+          const combined: GolfCourse[] = [];
+
+          // Local matches first
+          localMatches.forEach((c) => {
+            seenIds.add(c.name.toLowerCase());
+            combined.push(c);
+          });
+
+          // API matches
+          validApi.forEach((c) => {
+            if (!seenIds.has(c.name.toLowerCase())) {
+              seenIds.add(c.name.toLowerCase());
+              combined.push(c);
+            }
+          });
+
+          return combined;
         }
       }
     } catch (err) {
-      console.warn('Golf Course API fetch error (falling back to built-in):', err);
+      console.warn('GolfCourseAPI fetch error (falling back to built-in):', err);
     }
   }
 
