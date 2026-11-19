@@ -18,6 +18,24 @@ export interface Player {
   venmoHandle?: string;
 }
 
+export interface CourseTeeBox {
+  name: string; // e.g. "Championship", "Blue", "White", "Red"
+  rating?: number;
+  slope?: number;
+  yardage?: number;
+  pars: number[]; // Array of 18 hole pars
+  handicapRanks: number[]; // Array of 18 hole handicap ranks (1 to 18)
+}
+
+export interface GolfCourse {
+  id: string;
+  name: string;
+  location: string;
+  clubName?: string;
+  numHoles: number;
+  tees: CourseTeeBox[];
+}
+
 export interface HoleConfig {
   holeNumber: number;
   par: number;

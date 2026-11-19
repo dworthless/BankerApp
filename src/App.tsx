@@ -44,10 +44,11 @@ export const App: React.FC = () => {
     setCurrentTab('hole');
   };
 
-  const handleSaveHoles = (updatedHoles: HoleConfig[], updatedPlayers: Player[]) => {
+  const handleSaveHoles = (updatedHoles: HoleConfig[], updatedPlayers: Player[], newCourseName?: string) => {
     if (!round) return;
     const updatedRound: RoundState = {
       ...round,
+      courseName: newCourseName || round.courseName,
       holes: updatedHoles,
       players: updatedPlayers,
     };

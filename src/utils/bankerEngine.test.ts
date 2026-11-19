@@ -4,8 +4,10 @@ import {
   calculateStrokeMatrix,
   determineNextBanker,
   settleHole,
+  initializeRound,
 } from './bankerEngine';
 import { calculateMinimalSettlements } from './settlement';
+import { searchGolfCourses, generateSmartCourse } from './courseApi';
 
 describe('Banker Betting Engine (Custom Personal Rules)', () => {
   const defaultSettings: GameSettings = {
@@ -238,5 +240,49 @@ describe('Banker Betting Engine (Custom Personal Rules)', () => {
     expect(alexTransfers.length).toBe(2);
     const totalPaid = alexTransfers.reduce((sum, t) => sum + t.amount, 0);
     expect(totalPaid).toBe(10);
+  });
+
+  it('searches golf courses and auto-uploads custom pars and handicap ranks', async () => {
+    const results = await searchGolfCourses('Pebble Beach');
+    expect(results.length).toBeGreaterThan(0);
+    const pebble = results[0];
+    expect(pebble.name).toContain('Pebble Beach');
+    expect(pebble.tees.length).toBeGreaterThan(0);
+
+    const blueTee = pebble.tees[0];
+    expect(blueTee.pars.length).toBe(18);
+    expect(blueTee.handicapRanks.length).toBe(18);
+
+    // Initialize round with official Pebble Beach scorecard data
+    const round = initializeRound(
+      players,
+      defaultSettings,
+      pebble.name,
+      blueTee.pars,
+      blueTee.handicapRanks
+    );
+
+    expect(round.courseName).toBe('Pebble Beach Golf Links');
+    expect(round.holes[0].par).toBe(blueTee.pars[0]);
+    expect(round.holes[0].handicapRank).toBe(blueTee.handicapRanks[0]);
+
+    // Stroke allocations should align with official handicap rankings
+    // Ben has low hcp 5, Amy has hcp 12 (7 relative strokes)
+    // Amy should receive strokes on holes with handicap rank <= 7
+    round.holes.forEach((h) => {
+      const amyStrokes = h.playerStrokes['p2'];
+      if (h.handicapRank <= 7) {
+        expect(amyStrokes).toBe(1);
+      } else {
+        expect(amyStrokes).toBe(0);
+      }
+    });
+  });
+
+  it('generates a smart scorecard fallback for custom course names', () => {
+    const custom = generateSmartCourse('Torrey Pines Custom');
+    expect(custom.name).toBe('Torrey Pines Custom');
+    expect(custom.tees[0].pars.length).toBe(18);
+    expect(custom.tees[0].handicapRanks.length).toBe(18);
   });
 });

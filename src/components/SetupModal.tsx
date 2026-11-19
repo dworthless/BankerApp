@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { GameSettings, Player, RoundState } from '../types';
+import { GameSettings, Player, RoundState, GolfCourse, CourseTeeBox } from '../types';
 import { initializeRound, PLAYER_COLORS } from '../utils/bankerEngine';
-import { Check, DollarSign, UserPlus, Users, X } from 'lucide-react';
+import { CourseLookupModal } from './CourseLookupModal';
+import { Check, DollarSign, UserPlus, Users, X, Search, Sparkles } from 'lucide-react';
 
 interface SetupModalProps {
   isOpen: boolean;
@@ -23,7 +24,12 @@ export const SetupModal: React.FC<SetupModalProps> = ({
   onStartRound,
   initialRound,
 }) => {
-  const [courseName, setCourseName] = useState(initialRound?.courseName || 'Pine Valley Golf Club');
+  const [courseName, setCourseName] = useState(initialRound?.courseName || 'Pebble Beach Golf Links');
+  const [customPars, setCustomPars] = useState<number[] | undefined>(undefined);
+  const [customHandicapRanks, setCustomHandicapRanks] = useState<number[] | undefined>(undefined);
+  const [selectedTeeName, setSelectedTeeName] = useState<string | undefined>(undefined);
+  const [showCourseLookup, setShowCourseLookup] = useState<boolean>(false);
+
   const [totalHoles, setTotalHoles] = useState<9 | 18>(initialRound?.settings.totalHoles || 18);
   const [baseBet, setBaseBet] = useState<number>(initialRound?.settings.baseBet || 5);
 
@@ -59,6 +65,13 @@ export const SetupModal: React.FC<SetupModalProps> = ({
     setPlayers(players.map((p) => (p.id === id ? { ...p, ...updates } : p)));
   };
 
+  const handleSelectCourseFromApi = (course: GolfCourse, tee: CourseTeeBox) => {
+    setCourseName(course.name);
+    setSelectedTeeName(tee.name);
+    setCustomPars(tee.pars);
+    setCustomHandicapRanks(tee.handicapRanks);
+  };
+
   const handleCreateRound = () => {
     const settings: GameSettings = {
       totalHoles,
@@ -66,7 +79,13 @@ export const SetupModal: React.FC<SetupModalProps> = ({
       baseBet: Math.max(1, baseBet),
     };
 
-    const newRound = initializeRound(players, settings, courseName);
+    const newRound = initializeRound(
+      players,
+      settings,
+      courseName,
+      customPars,
+      customHandicapRanks
+    );
     onStartRound(newRound);
     onClose();
   };
@@ -97,18 +116,65 @@ export const SetupModal: React.FC<SetupModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 overflow-y-auto space-y-4 flex-1 text-sm">
-          {/* Course Name */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-              Course Name
-            </label>
-            <input
-              type="text"
-              value={courseName}
-              onChange={(e) => setCourseName(e.target.value)}
-              placeholder="e.g. Pine Valley Golf Club"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm font-medium"
-            />
+          {/* Course Lookup & Name */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Golf Course & Scorecard
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCourseLookup(true)}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-950/70 border border-emerald-800/80 px-2.5 py-1 rounded-lg transition active:scale-95"
+              >
+                <Search className="w-3.5 h-3.5" /> Lookup Course API
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={courseName}
+                onChange={(e) => setCourseName(e.target.value)}
+                placeholder="e.g. Pebble Beach, Torrey Pines, Bandon..."
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm font-medium"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCourseLookup(true)}
+                className="px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center"
+                title="Search Course Database & API"
+              >
+                <Search className="w-4 h-4 text-emerald-400" />
+              </button>
+            </div>
+
+            {/* Auto-Loaded Scorecard Badge */}
+            {customPars && customHandicapRanks && (
+              <div className="bg-emerald-950/50 border border-emerald-700/60 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="font-bold text-emerald-300">
+                      Official Pars & Handicap Ranks Auto-Loaded
+                    </span>
+                    {selectedTeeName && (
+                      <span className="text-slate-400 block text-[11px]">
+                        Tee: <strong className="text-slate-200">{selectedTeeName}</strong> • Total Par: {customPars.reduce((a, b) => a + b, 0)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCourseLookup(true)}
+                  className="text-[11px] font-bold text-emerald-400 underline shrink-0"
+                >
+                  Change Tee
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Number of Holes */}
@@ -263,6 +329,14 @@ export const SetupModal: React.FC<SetupModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Course API Lookup Modal */}
+      <CourseLookupModal
+        isOpen={showCourseLookup}
+        onClose={() => setShowCourseLookup(false)}
+        onSelectCourse={handleSelectCourseFromApi}
+        currentCourseName={courseName}
+      />
     </div>
   );
 };

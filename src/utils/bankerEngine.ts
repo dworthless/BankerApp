@@ -27,18 +27,30 @@ export const PLAYER_COLORS = [
 export function generateDefaultHoles(
   totalHoles: 9 | 18,
   players: Player[],
-  handicapMode: 'off_low_handicap' | 'flat_gross' | 'custom_matrix' = 'off_low_handicap'
+  handicapMode: 'off_low_handicap' | 'flat_gross' | 'custom_matrix' = 'off_low_handicap',
+  customPars?: number[],
+  customHandicapRanks?: number[]
 ): HoleConfig[] {
   const holes: HoleConfig[] = [];
   const holeCount = totalHoles === 9 ? 9 : 18;
 
   // Calculate stroke allocations
-  const strokeAllocations = calculateStrokeMatrix(holeCount, players, handicapMode);
+  const strokeAllocations = calculateStrokeMatrix(
+    holeCount,
+    players,
+    handicapMode,
+    customHandicapRanks
+  );
 
   for (let i = 0; i < holeCount; i++) {
     const holeNumber = i + 1;
-    const par = DEFAULT_PARS_18[i] || 4;
-    const handicapRank = totalHoles === 9 ? i + 1 : DEFAULT_HDCP_RANKS_18[i] || (i + 1);
+    const par = customPars && customPars[i] ? customPars[i] : DEFAULT_PARS_18[i] || 4;
+    const handicapRank =
+      customHandicapRanks && customHandicapRanks[i]
+        ? customHandicapRanks[i]
+        : totalHoles === 9
+        ? i + 1
+        : DEFAULT_HDCP_RANKS_18[i] || i + 1;
 
     holes.push({
       holeNumber,
@@ -57,7 +69,8 @@ export function generateDefaultHoles(
 export function calculateStrokeMatrix(
   totalHoles: number,
   players: Player[],
-  handicapMode: 'off_low_handicap' | 'flat_gross' | 'custom_matrix'
+  handicapMode: 'off_low_handicap' | 'flat_gross' | 'custom_matrix',
+  customHandicapRanks?: number[]
 ): Record<number, Record<string, number>> {
   const matrix: Record<number, Record<string, number>> = {};
 
@@ -83,7 +96,12 @@ export function calculateStrokeMatrix(
     const remStrokes = relHcp % totalHoles;
 
     for (let h = 1; h <= totalHoles; h++) {
-      const hdcpRank = totalHoles === 9 ? h : DEFAULT_HDCP_RANKS_18[h - 1] || h;
+      const hdcpRank =
+        customHandicapRanks && customHandicapRanks[h - 1]
+          ? customHandicapRanks[h - 1]
+          : totalHoles === 9
+          ? h
+          : DEFAULT_HDCP_RANKS_18[h - 1] || h;
       const getsExtra = hdcpRank <= remStrokes ? 1 : 0;
       matrix[h][player.id] = fullStrokes + getsExtra;
     }
@@ -479,9 +497,17 @@ export function calculatePlayerStats(round: RoundState): PlayerStats[] {
 export function initializeRound(
   players: Player[],
   settings: GameSettings,
-  courseName = 'Banker Round'
+  courseName = 'Banker Round',
+  customPars?: number[],
+  customHandicapRanks?: number[]
 ): RoundState {
-  const holes = generateDefaultHoles(settings.totalHoles, players, 'off_low_handicap');
+  const holes = generateDefaultHoles(
+    settings.totalHoles,
+    players,
+    'off_low_handicap',
+    customPars,
+    customHandicapRanks
+  );
   const holesData: Record<number, HoleData> = {};
 
   const totalHoleCount = settings.totalHoles === 9 ? 9 : 18;

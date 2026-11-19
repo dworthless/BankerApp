@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { HoleConfig, Player, RoundState } from '../types';
+import { HoleConfig, Player, RoundState, GolfCourse, CourseTeeBox } from '../types';
 import { calculateStrokeMatrix } from '../utils/bankerEngine';
-import { Check, RefreshCw, X } from 'lucide-react';
+import { CourseLookupModal } from './CourseLookupModal';
+import { Check, RefreshCw, X, Search } from 'lucide-react';
 
 interface HandicapEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   round: RoundState;
-  onSaveHoles: (updatedHoles: HoleConfig[], updatedPlayers: Player[]) => void;
+  onSaveHoles: (updatedHoles: HoleConfig[], updatedPlayers: Player[], newCourseName?: string) => void;
 }
 
 export const HandicapEditorModal: React.FC<HandicapEditorModalProps> = ({
@@ -18,8 +19,33 @@ export const HandicapEditorModal: React.FC<HandicapEditorModalProps> = ({
 }) => {
   const [holes, setHoles] = useState<HoleConfig[]>(JSON.parse(JSON.stringify(round.holes)));
   const [players] = useState<Player[]>(JSON.parse(JSON.stringify(round.players)));
+  const [courseName, setCourseName] = useState<string>(round.courseName || '');
+  const [showCourseLookup, setShowCourseLookup] = useState<boolean>(false);
 
   if (!isOpen) return null;
+
+  const handleSelectCourseFromApi = (course: GolfCourse, tee: CourseTeeBox) => {
+    const totalHoleCount = round.settings.totalHoles;
+    const newCourseTitle = `${course.name} (${tee.name})`;
+    setCourseName(newCourseTitle);
+
+    // Compute stroke matrix with new handicap ranks
+    const matrix = calculateStrokeMatrix(
+      totalHoleCount,
+      players,
+      'off_low_handicap',
+      tee.handicapRanks
+    );
+
+    setHoles((prev) =>
+      prev.map((h, idx) => ({
+        ...h,
+        par: tee.pars[idx] || h.par,
+        handicapRank: tee.handicapRanks[idx] || h.handicapRank,
+        playerStrokes: matrix[h.holeNumber] || h.playerStrokes,
+      }))
+    );
+  };
 
   const handleToggleStroke = (holeNumber: number, playerId: string) => {
     setHoles((prev) =>
@@ -52,7 +78,8 @@ export const HandicapEditorModal: React.FC<HandicapEditorModalProps> = ({
 
   const handleAutoAllocate = () => {
     const totalHoleCount = round.settings.totalHoles;
-    const matrix = calculateStrokeMatrix(totalHoleCount, players, 'off_low_handicap');
+    const currentRanks = holes.map((h) => h.handicapRank);
+    const matrix = calculateStrokeMatrix(totalHoleCount, players, 'off_low_handicap', currentRanks);
     setHoles((prev) =>
       prev.map((h) => ({
         ...h,
@@ -77,7 +104,7 @@ export const HandicapEditorModal: React.FC<HandicapEditorModalProps> = ({
   };
 
   const handleSave = () => {
-    onSaveHoles(holes, players);
+    onSaveHoles(holes, players, courseName);
     onClose();
   };
 
@@ -104,18 +131,29 @@ export const HandicapEditorModal: React.FC<HandicapEditorModalProps> = ({
 
         {/* Action Toolbar */}
         <div className="p-3 bg-slate-950/60 border-b border-slate-800/80 flex flex-wrap gap-2 items-center justify-between">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
-              onClick={handleAutoAllocate}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 text-xs font-medium flex items-center gap-1.5 transition"
+              type="button"
+              onClick={() => setShowCourseLookup(true)}
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Auto-Calculate Strokes (Off Low Hcp)
+              <Search className="w-3.5 h-3.5" /> Lookup / Switch Course
             </button>
+
             <button
-              onClick={handleClearAllStrokes}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+              type="button"
+              onClick={handleAutoAllocate}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition"
             >
-              Clear All
+              <RefreshCw className="w-3.5 h-3.5 text-emerald-400" /> Recalculate Strokes
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearAllStrokes}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs font-medium transition"
+            >
+              Clear
             </button>
           </div>
         </div>
@@ -227,6 +265,14 @@ export const HandicapEditorModal: React.FC<HandicapEditorModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Course API Lookup Modal */}
+      <CourseLookupModal
+        isOpen={showCourseLookup}
+        onClose={() => setShowCourseLookup(false)}
+        onSelectCourse={handleSelectCourseFromApi}
+        currentCourseName={courseName}
+      />
     </div>
   );
 };
