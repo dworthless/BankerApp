@@ -12,10 +12,23 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
   round,
   onSelectHole,
 }) => {
-  const [viewMode, setViewMode] = useState<'both' | 'scores' | 'money'>('both');
+  const [viewMode, setViewMode] = useState<'both' | 'scores' | 'money' | 'cumulative'>('both');
   const totalHoles = round.settings.totalHoles;
 
   const stats = calculatePlayerStats(round);
+
+  // Compute cumulative balance hole-by-hole for each player
+  const cumulativeBalances: Record<string, Record<number, number>> = {};
+  round.players.forEach((p) => {
+    cumulativeBalances[p.id] = {};
+    let running = 0;
+    for (let h = 1; h <= totalHoles; h++) {
+      const hData = round.holesData[h];
+      const delta = hData?.settlement?.playerDeltas[p.id] || 0;
+      running += delta;
+      cumulativeBalances[p.id][h] = running;
+    }
+  });
 
   // Helper to format golf score badge
   const renderScoreCell = (
@@ -23,7 +36,9 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
     par: number,
     strokes: number,
     isBanker: boolean,
-    netDollar: number | undefined
+    netDollar: number | undefined,
+    playerId: string,
+    holeNum: number
   ) => {
     if (gross === null || gross === undefined) {
       return (
@@ -95,22 +110,28 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
             {netDollar > 0 ? `+$${netDollar}` : netDollar < 0 ? `-$${Math.abs(netDollar)}` : '$0'}
           </span>
         )}
+
+        {/* Cumulative running money balance */}
+        {viewMode === 'cumulative' && (
+          <span
+            className={`text-[10px] font-black mt-0.5 px-1.5 py-0.2 rounded ${
+              (cumulativeBalances[playerId]?.[holeNum] || 0) > 0
+                ? 'text-emerald-300 bg-emerald-950/80 border border-emerald-700/60'
+                : (cumulativeBalances[playerId]?.[holeNum] || 0) < 0
+                ? 'text-rose-300 bg-rose-950/80 border border-rose-700/60'
+                : 'text-slate-400 bg-slate-950'
+            }`}
+          >
+            {(cumulativeBalances[playerId]?.[holeNum] || 0) > 0
+              ? `+$${cumulativeBalances[playerId][holeNum]}`
+              : (cumulativeBalances[playerId]?.[holeNum] || 0) < 0
+              ? `-$${Math.abs(cumulativeBalances[playerId][holeNum])}`
+              : '$0'}
+          </span>
+        )}
       </div>
     );
   };
-
-  // Compute cumulative balance hole-by-hole for each player
-  const cumulativeBalances: Record<string, Record<number, number>> = {};
-  round.players.forEach((p) => {
-    cumulativeBalances[p.id] = {};
-    let running = 0;
-    for (let h = 1; h <= totalHoles; h++) {
-      const hData = round.holesData[h];
-      const delta = hData?.settlement?.playerDeltas[p.id] || 0;
-      running += delta;
-      cumulativeBalances[p.id][h] = running;
-    }
-  });
 
   return (
     <div className="space-y-4 pb-20">
@@ -126,30 +147,38 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
           <button
             onClick={() => setViewMode('both')}
-            className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-              viewMode === 'both' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'
+            className={`px-2 py-1 rounded-lg font-semibold transition text-[11px] ${
+              viewMode === 'both' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'
             }`}
           >
             All
           </button>
           <button
             onClick={() => setViewMode('scores')}
-            className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-              viewMode === 'scores' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'
+            className={`px-2 py-1 rounded-lg font-semibold transition text-[11px] ${
+              viewMode === 'scores' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'
             }`}
           >
             Scores
           </button>
           <button
             onClick={() => setViewMode('money')}
-            className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-              viewMode === 'money' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'
+            className={`px-2 py-1 rounded-lg font-semibold transition text-[11px] ${
+              viewMode === 'money' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'
             }`}
           >
-            $ Net
+            Hole $
+          </button>
+          <button
+            onClick={() => setViewMode('cumulative')}
+            className={`px-2 py-1 rounded-lg font-semibold transition text-[11px] ${
+              viewMode === 'cumulative' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400'
+            }`}
+          >
+            Total $
           </button>
         </div>
       </div>
@@ -240,7 +269,7 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
                             hole.holeNumber === round.currentHole ? 'bg-emerald-950/30' : ''
                           }`}
                         >
-                          {renderScoreCell(gross, hole.par, strokes, isBanker, netDollar)}
+                          {renderScoreCell(gross, hole.par, strokes, isBanker, netDollar, player.id, hole.holeNumber)}
                         </td>
                       );
                     })}
@@ -255,19 +284,23 @@ export const ScorecardView: React.FC<ScorecardViewProps> = ({
 
                     {/* Total Net $ Winnings */}
                     <td
-                      className={`p-2 text-center bg-slate-950/40 border-l border-slate-800 font-black text-xs ${
-                        (pStats?.netWinnings || 0) > 0
-                          ? 'text-emerald-400'
-                          : (pStats?.netWinnings || 0) < 0
-                          ? 'text-rose-400'
-                          : 'text-slate-400'
-                      }`}
+                      className={`p-2 text-center bg-slate-950/40 border-l border-slate-800 font-black text-xs`}
                     >
-                      {(pStats?.netWinnings || 0) > 0
-                        ? `+$${pStats?.netWinnings}`
-                        : (pStats?.netWinnings || 0) < 0
-                        ? `-$${Math.abs(pStats?.netWinnings || 0)}`
-                        : '$0'}
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded-md border text-[11px] font-black ${
+                          (pStats?.netWinnings || 0) > 0
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                            : (pStats?.netWinnings || 0) < 0
+                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }`}
+                      >
+                        {(pStats?.netWinnings || 0) > 0
+                          ? `+$${pStats?.netWinnings}`
+                          : (pStats?.netWinnings || 0) < 0
+                          ? `-$${Math.abs(pStats?.netWinnings || 0)}`
+                          : '$0'}
+                      </span>
                     </td>
                   </tr>
                 );

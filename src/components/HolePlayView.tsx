@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   HoleConfig,
   HoleData,
   RoundState,
 } from '../types';
-import { settleHole } from '../utils/bankerEngine';
+import { settleHole, calculatePlayerStats } from '../utils/bankerEngine';
+import { LiveBalanceBar } from './LiveBalanceBar';
 import {
   ArrowRight,
   Award,
@@ -51,6 +52,15 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
 
   const banker = round.players.find((p) => p.id === holeData.bankerId) || round.players[0];
   const opponents = round.players.filter((p) => p.id !== banker.id);
+
+  // Overall player stats across all scored holes
+  const playerStatsMap = useMemo(() => {
+    const map: Record<string, import('../types').PlayerStats> = {};
+    calculatePlayerStats(round).forEach((s) => {
+      map[s.playerId] = s;
+    });
+    return map;
+  }, [round]);
 
   // Random draw / Tee flip for Hole 1
   const handleFlipTee = () => {
@@ -502,25 +512,58 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
         </div>
       </div>
 
+      {/* LIVE BALANCE TICKER BAR */}
+      <LiveBalanceBar
+        round={round}
+        onNavigateToSettlement={() => onNavigateTab('settlement')}
+      />
+
       {/* BANKER CARD */}
       <div className="bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-emerald-500/80 rounded-2xl p-4 shadow-xl relative overflow-hidden">
         {/* Glow accent */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
+        {/* Banker Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white shadow-md border border-white/20"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white shadow-md border border-white/20 shrink-0"
               style={{ backgroundColor: banker.color }}
             >
               🏦
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 bg-emerald-500 text-slate-950 rounded-full">
                   THE BANKER
                 </span>
-                <span className="text-[10px] text-emerald-400 font-medium">Tees Off Last</span>
+                {/* Banker Total Balance Badge */}
+                {(() => {
+                  const bankerStat = playerStatsMap[banker.id];
+                  const bankerTotal = bankerStat ? bankerStat.netWinnings : 0;
+                  const isUp = bankerTotal > 0;
+                  const isDown = bankerTotal < 0;
+
+                  return (
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                        isUp
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                          : isDown
+                          ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                          : 'bg-slate-800 text-slate-300 border-slate-700'
+                      }`}
+                    >
+                      {isUp && <TrendingUp className="w-2.5 h-2.5" />}
+                      {isDown && <TrendingDown className="w-2.5 h-2.5" />}
+                      {isUp
+                        ? `Total: +$${bankerTotal}`
+                        : isDown
+                        ? `Total: -$${Math.abs(bankerTotal)}`
+                        : 'Total: $0'}
+                    </span>
+                  );
+                })()}
               </div>
               <h3 className="text-lg font-black text-white leading-tight mt-0.5">{banker.name}</h3>
             </div>
@@ -743,10 +786,38 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                     {opponent.name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white leading-tight">
-                      {opponent.name}
-                      <span className="text-xs text-slate-400 font-normal ml-1">vs {banker.name}</span>
-                    </h4>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="text-sm font-bold text-white leading-tight">
+                        {opponent.name}
+                      </h4>
+                      {/* Opponent Total Balance Status Badge */}
+                      {(() => {
+                        const oppStat = playerStatsMap[opponent.id];
+                        const oppTotal = oppStat ? oppStat.netWinnings : 0;
+                        const isUp = oppTotal > 0;
+                        const isDown = oppTotal < 0;
+
+                        return (
+                          <span
+                            className={`text-[10px] font-black px-1.5 py-0.2 rounded-md border flex items-center gap-0.5 ${
+                              isUp
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : isDown
+                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            {isUp && <TrendingUp className="w-2.5 h-2.5" />}
+                            {isDown && <TrendingDown className="w-2.5 h-2.5" />}
+                            {isUp
+                              ? `+$${oppTotal}`
+                              : isDown
+                              ? `-$${Math.abs(oppTotal)}`
+                              : '$0'}
+                          </span>
+                        );
+                      })()}
+                    </div>
 
                     {/* Dynamic Stroke Stepper for Opponent on this Hole */}
                     <div className="flex items-center gap-1 mt-0.5">
