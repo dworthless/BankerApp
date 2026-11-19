@@ -201,6 +201,25 @@ export const CourseLookupModal: React.FC<CourseLookupModalProps> = ({
                 Select Course
               </span>
 
+              {/* Quick Auto-Create option if searching */}
+              {searchQuery.trim().length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const generated = generateSmartCourse(searchQuery);
+                    setSelectedCourse(generated);
+                    setSelectedTeeIndex(0);
+                  }}
+                  className="w-full text-left p-2 rounded-xl bg-emerald-950/40 border border-dashed border-emerald-600/70 text-emerald-300 hover:bg-emerald-950/70 transition flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div className="text-[11px] truncate">
+                    <span className="font-bold">Auto-Create Scorecard:</span>{' '}
+                    <span className="text-white font-medium">"{searchQuery}"</span>
+                  </div>
+                </button>
+              )}
+
               {courses.map((course) => {
                 const isSelected = selectedCourse?.id === course.id;
                 return (
@@ -227,14 +246,14 @@ export const CourseLookupModal: React.FC<CourseLookupModalProps> = ({
               {/* Not Found / Custom Course Creator */}
               <div className="p-2.5 bg-slate-950/60 border border-dashed border-slate-700 rounded-xl space-y-2 mt-2">
                 <span className="text-[10px] text-slate-400 block">
-                  Don't see your local course? Type name below:
+                  Don't see your local course? Add any course name:
                 </span>
                 <div className="flex gap-1.5">
                   <input
                     type="text"
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="Enter Course Name"
+                    placeholder="e.g. Oakmont West or Local Muni"
                     className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white text-xs"
                   />
                   <button
@@ -243,7 +262,7 @@ export const CourseLookupModal: React.FC<CourseLookupModalProps> = ({
                     disabled={!customName.trim()}
                     className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-emerald-400 border border-slate-700 rounded-lg text-xs font-bold flex items-center gap-1"
                   >
-                    <Plus className="w-3 h-3" /> Add
+                    <Plus className="w-3 h-3" /> Load
                   </button>
                 </div>
               </div>
