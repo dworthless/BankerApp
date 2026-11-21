@@ -492,6 +492,21 @@ export function calculatePlayerStats(round: RoundState): PlayerStats[] {
 }
 
 /**
+ * Generate a clean 6-character match code for sharing & spectator syncing (e.g. "LAK834" or "BNK512")
+ */
+export function generateMatchCode(courseName?: string): string {
+  let prefix = 'BNK';
+  if (courseName) {
+    const cleaned = courseName.replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (cleaned.length >= 3) {
+      prefix = cleaned.slice(0, 3);
+    }
+  }
+  const digits = Math.floor(100 + Math.random() * 900); // 100-999
+  return `${prefix}${digits}`;
+}
+
+/**
  * Initialize a brand new round with configured players & settings
  */
 export function initializeRound(
@@ -536,8 +551,11 @@ export function initializeRound(
     };
   }
 
+  const matchCode = generateMatchCode(courseName);
+
   return {
     id: `round_${Date.now()}`,
+    matchCode,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     courseName,

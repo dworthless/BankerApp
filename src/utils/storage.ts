@@ -76,3 +76,11 @@ export function deleteRoundFromHistory(roundId: string): void {
     console.error('Failed to delete round from history:', err);
   }
 }
+
+export function clearAllRoundHistory(): void {
+  try {
+    localStorage.removeItem(ROUND_HISTORY_KEY);
+  } catch (err) {
+    console.error('Failed to clear all round history:', err);
+  }
+}

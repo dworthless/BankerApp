@@ -5,9 +5,12 @@ import {
   determineNextBanker,
   settleHole,
   initializeRound,
+  generateMatchCode,
 } from './bankerEngine';
 import { calculateMinimalSettlements } from './settlement';
 import { searchGolfCourses, generateSmartCourse } from './courseApi';
+import { BUILT_IN_COURSES } from './courseDatabase';
+import { encodeRoundSnapshot, decodeRoundSnapshot } from './liveSync';
 
 describe('Banker Betting Engine (Custom Personal Rules)', () => {
   const defaultSettings: GameSettings = {
@@ -284,5 +287,38 @@ describe('Banker Betting Engine (Custom Personal Rules)', () => {
     expect(custom.name).toBe('Torrey Pines Custom');
     expect(custom.tees[0].pars.length).toBe(18);
     expect(custom.tees[0].handicapRanks.length).toBe(18);
+  });
+
+  it('includes Lakewood Oaks Golf Course in Lee Summit MO with correct scorecard', () => {
+    const lakewood = BUILT_IN_COURSES.find((c) => c.id === 'lakewood-oaks');
+    expect(lakewood).toBeDefined();
+    expect(lakewood?.name).toBe('Lakewood Oaks Golf Course');
+    expect(lakewood?.location).toContain("Lee's Summit");
+    expect(lakewood?.tees.length).toBeGreaterThanOrEqual(4);
+
+    const championshipTee = lakewood?.tees[0];
+    expect(championshipTee?.pars.length).toBe(18);
+    expect(championshipTee?.handicapRanks.length).toBe(18);
+    // Par 71 check: sum of pars = 71
+    const totalPar = championshipTee?.pars.reduce((a, b) => a + b, 0);
+    expect(totalPar).toBe(71);
+  });
+
+  it('generates match codes and serializes snapshots for view-only spectators', () => {
+    const code = generateMatchCode('Lakewood Oaks');
+    expect(code).toMatch(/^LAK\d{3}$/);
+
+    const round = initializeRound(players, defaultSettings, 'Lakewood Oaks Golf Course');
+    expect(round.matchCode).toBeDefined();
+
+    const snapshot = encodeRoundSnapshot(round);
+    expect(typeof snapshot).toBe('string');
+    expect(snapshot.length).toBeGreaterThan(20);
+
+    const decoded = decodeRoundSnapshot(snapshot);
+    expect(decoded).toBeDefined();
+    expect(decoded?.courseName).toBe('Lakewood Oaks Golf Course');
+    expect(decoded?.players.length).toBe(4);
+    expect(decoded?.matchCode).toBe(round.matchCode);
   });
 });

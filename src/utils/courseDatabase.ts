@@ -2,6 +2,55 @@ import { GolfCourse } from '../types';
 
 export const BUILT_IN_COURSES: GolfCourse[] = [
   {
+    id: 'lakewood-oaks',
+    name: 'Lakewood Oaks Golf Course',
+    location: "Lee's Summit, MO",
+    clubName: 'Lakewood Oaks Country Club',
+    numHoles: 18,
+    tees: [
+      {
+        name: 'Black / Championship',
+        rating: 73.6,
+        slope: 137,
+        yardage: 6867,
+        pars: [4, 5, 4, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 4],
+        handicapRanks: [7, 3, 11, 17, 1, 9, 15, 5, 13, 6, 18, 8, 2, 12, 16, 4, 10, 14],
+      },
+      {
+        name: 'Blue Tees',
+        rating: 71.8,
+        slope: 133,
+        yardage: 6420,
+        pars: [4, 5, 4, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 4],
+        handicapRanks: [7, 3, 11, 17, 1, 9, 15, 5, 13, 6, 18, 8, 2, 12, 16, 4, 10, 14],
+      },
+      {
+        name: 'White Tees',
+        rating: 69.9,
+        slope: 129,
+        yardage: 6010,
+        pars: [4, 5, 4, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 4],
+        handicapRanks: [7, 3, 11, 17, 1, 9, 15, 5, 13, 6, 18, 8, 2, 12, 16, 4, 10, 14],
+      },
+      {
+        name: 'Gold / Senior',
+        rating: 67.5,
+        slope: 123,
+        yardage: 5545,
+        pars: [4, 5, 4, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 4],
+        handicapRanks: [7, 3, 11, 17, 1, 9, 15, 5, 13, 6, 18, 8, 2, 12, 16, 4, 10, 14],
+      },
+      {
+        name: 'Red / Forward',
+        rating: 70.1,
+        slope: 121,
+        yardage: 5040,
+        pars: [4, 5, 4, 3, 4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 4, 4],
+        handicapRanks: [7, 3, 11, 17, 1, 9, 15, 5, 13, 6, 18, 8, 2, 12, 16, 4, 10, 14],
+      },
+    ],
+  },
+  {
     id: 'arborlinks',
     name: 'Arborlinks Golf Course',
     location: 'Nebraska City, NE',

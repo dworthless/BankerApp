@@ -91,6 +91,7 @@ export interface GameSettings {
 
 export interface RoundState {
   id: string;
+  matchCode?: string;
   createdAt: string;
   updatedAt: string;
   courseName: string;

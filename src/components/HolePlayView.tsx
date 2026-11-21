@@ -21,18 +21,25 @@ import {
   UserCheck,
   X,
   Zap,
+  Eye,
+  Lock,
+  Share2,
 } from 'lucide-react';
 
 interface HolePlayViewProps {
   round: RoundState;
   onUpdateRound: (updated: RoundState) => void;
   onNavigateTab: (tab: 'hole' | 'scorecard' | 'settlement') => void;
+  isSpectator?: boolean;
+  onOpenShare?: () => void;
 }
 
 export const HolePlayView: React.FC<HolePlayViewProps> = ({
   round,
   onUpdateRound,
   onNavigateTab,
+  isSpectator = false,
+  onOpenShare,
 }) => {
   const currentHoleNum = round.currentHole;
   const holeConfig: HoleConfig =
@@ -453,30 +460,32 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
         </div>
 
         {/* Par Quick Selector (Change Par Before/During Hole) */}
-        <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            Set Hole Par:
-          </span>
-          <div className="flex gap-1.5">
-            {[3, 4, 5].map((pVal) => (
-              <button
-                key={pVal}
-                type="button"
-                onClick={() => handleUpdateHolePar(pVal)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition active:scale-95 flex items-center gap-1 ${
-                  holeConfig.par === pVal
-                    ? pVal === 3
-                      ? 'bg-amber-500 text-slate-950 font-black shadow-md ring-2 ring-amber-300'
-                      : 'bg-emerald-500 text-slate-950 font-black shadow-md ring-2 ring-emerald-300'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                Par {pVal}
-                {pVal === 3 && <span className="text-[10px]">⚡️(3x)</span>}
-              </button>
-            ))}
+        {!isSpectator && (
+          <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-800/80">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Set Hole Par:
+            </span>
+            <div className="flex gap-1.5">
+              {[3, 4, 5].map((pVal) => (
+                <button
+                  key={pVal}
+                  type="button"
+                  onClick={() => handleUpdateHolePar(pVal)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition active:scale-95 flex items-center gap-1 ${
+                    holeConfig.par === pVal
+                      ? pVal === 3
+                        ? 'bg-amber-500 text-slate-950 font-black shadow-md ring-2 ring-amber-300'
+                        : 'bg-emerald-500 text-slate-950 font-black shadow-md ring-2 ring-emerald-300'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  Par {pVal}
+                  {pVal === 3 && <span className="text-[10px]">⚡️(3x)</span>}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Quick Hole Picker Pill Bar */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none">
@@ -517,6 +526,34 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
         round={round}
         onNavigateToSettlement={() => onNavigateTab('settlement')}
       />
+
+      {/* Live Match Spectator / Host Share Strip */}
+      {isSpectator ? (
+        <div className="bg-sky-950/40 border border-sky-800/60 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 text-sky-300 font-bold">
+            <Eye className="w-3.5 h-3.5 text-sky-400" />
+            <span>Viewing Match Code: <strong className="font-mono text-white">{round.matchCode || 'LIVE'}</strong></span>
+          </div>
+          <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+            <Lock className="w-2.5 h-2.5" /> Read-Only
+          </span>
+        </div>
+      ) : onOpenShare ? (
+        <div
+          onClick={onOpenShare}
+          className="bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-800/60 rounded-xl px-3 py-2 flex items-center justify-between text-xs cursor-pointer transition active:scale-[0.99] group"
+        >
+          <div className="flex items-center gap-2">
+            <Share2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition" />
+            <span className="text-slate-300">
+              Live Spectator Code: <strong className="font-mono text-white font-bold">{round.matchCode || 'BANKER'}</strong>
+            </span>
+          </div>
+          <span className="text-[11px] font-bold text-emerald-400 underline">
+            Share Link
+          </span>
+        </div>
+      ) : null}
 
       {/* BANKER CARD */}
       <div className="bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-emerald-500/80 rounded-2xl p-4 shadow-xl relative overflow-hidden">
@@ -570,25 +607,27 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
           </div>
 
           {/* Switch Banker & Tee Flip */}
-          <div className="flex items-center gap-1.5">
-            {currentHoleNum === 1 && (
-              <button
-                type="button"
-                onClick={handleFlipTee}
-                className="text-[11px] font-bold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 px-2.5 py-1.5 rounded-lg border border-amber-600/50 flex items-center gap-1 transition active:scale-95 shadow-sm"
-                title="Flip Tee / Random Banker for Hole 1"
-              >
-                <span>🎲</span> Flip Tee
-              </button>
-            )}
+          {!isSpectator && (
+            <div className="flex items-center gap-1.5">
+              {currentHoleNum === 1 && (
+                <button
+                  type="button"
+                  onClick={handleFlipTee}
+                  className="text-[11px] font-bold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 px-2.5 py-1.5 rounded-lg border border-amber-600/50 flex items-center gap-1 transition active:scale-95 shadow-sm"
+                  title="Flip Tee / Random Banker for Hole 1"
+                >
+                  <span>🎲</span> Flip Tee
+                </button>
+              )}
 
-            <button
-              onClick={() => setShowBankerSelect(!showBankerSelect)}
-              className="text-[11px] text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1 transition"
-            >
-              Change <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          </div>
+              <button
+                onClick={() => setShowBankerSelect(!showBankerSelect)}
+                className="text-[11px] text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1 transition"
+              >
+                Change <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Change Banker Dropdown */}
@@ -630,38 +669,44 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
             {/* Dynamic Stroke Stepper for Banker on this Hole */}
             <div className="flex items-center gap-1.5 bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
               <span className="text-[10px] text-slate-400 uppercase font-semibold">Strokes:</span>
-              <button
-                type="button"
-                onClick={() => handleAdjustPlayerStrokes(banker.id, -1)}
-                disabled={bankerStrokes <= 0}
-                className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-xs font-bold active:scale-90 transition"
-                title="Remove 1 stroke on this hole"
-              >
-                -
-              </button>
+              {!isSpectator && (
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPlayerStrokes(banker.id, -1)}
+                  disabled={bankerStrokes <= 0}
+                  className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-xs font-bold active:scale-90 transition"
+                  title="Remove 1 stroke on this hole"
+                >
+                  -
+                </button>
+              )}
               <span className={`text-xs font-black min-w-[16px] text-center ${bankerStrokes > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
                 {bankerStrokes > 0 ? `${bankerStrokes} (${'•'.repeat(bankerStrokes)})` : '0'}
               </span>
-              <button
-                type="button"
-                onClick={() => handleAdjustPlayerStrokes(banker.id, 1)}
-                disabled={bankerStrokes >= 4}
-                className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-xs font-bold active:scale-90 transition"
-                title="Add 1 stroke on this hole"
-              >
-                +
-              </button>
+              {!isSpectator && (
+                <button
+                  type="button"
+                  onClick={() => handleAdjustPlayerStrokes(banker.id, 1)}
+                  disabled={bankerStrokes >= 4}
+                  className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-xs font-bold active:scale-90 transition"
+                  title="Add 1 stroke on this hole"
+                >
+                  +
+                </button>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => handleScoreChange(banker.id, -1)}
-              className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-lg active:scale-90 transition border border-slate-700 shadow-sm"
-              aria-label="Decrease Banker Score"
-            >
-              <Minus className="w-5 h-5" />
-            </button>
+            {!isSpectator && (
+              <button
+                onClick={() => handleScoreChange(banker.id, -1)}
+                className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-lg active:scale-90 transition border border-slate-700 shadow-sm"
+                aria-label="Decrease Banker Score"
+              >
+                <Minus className="w-5 h-5" />
+              </button>
+            )}
 
             <div className="flex-1 text-center bg-slate-900 border border-slate-800 rounded-xl py-1">
               <span className="text-3xl font-black text-emerald-400">
@@ -680,42 +725,48 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                     : bankerGrossScore === holeConfig.par + 1
                     ? 'Bogey'
                     : `+${bankerGrossScore - holeConfig.par}`
+                  : isSpectator
+                  ? 'Waiting for score...'
                   : 'Enter Gross'}
               </span>
             </div>
 
-            <button
-              onClick={() => handleScoreChange(banker.id, 1)}
-              className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-lg active:scale-90 transition border border-slate-700 shadow-sm"
-              aria-label="Increase Banker Score"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+            {!isSpectator && (
+              <button
+                onClick={() => handleScoreChange(banker.id, 1)}
+                className="w-12 h-12 rounded-xl bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-lg active:scale-90 transition border border-slate-700 shadow-sm"
+                aria-label="Increase Banker Score"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {/* Quick Score Chips */}
-          <div className="flex gap-1.5 mt-2.5 justify-center">
-            {[-1, 0, 1, 2].map((diff) => {
-              const val = holeConfig.par + diff;
-              const isSelected = bankerGrossScore === val;
-              const label =
-                diff === -1 ? 'Birdie' : diff === 0 ? 'Par' : diff === 1 ? 'Bogey' : 'Dbl Bogey';
+          {!isSpectator && (
+            <div className="flex gap-1.5 mt-2.5 justify-center">
+              {[-1, 0, 1, 2].map((diff) => {
+                const val = holeConfig.par + diff;
+                const isSelected = bankerGrossScore === val;
+                const label =
+                  diff === -1 ? 'Birdie' : diff === 0 ? 'Par' : diff === 1 ? 'Bogey' : 'Dbl Bogey';
 
-              return (
-                <button
-                  key={val}
-                  onClick={() => handleSetQuickScore(banker.id, val)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                    isSelected
-                      ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
-                      : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
-                  }`}
-                >
-                  {val} ({label})
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={val}
+                    onClick={() => handleSetQuickScore(banker.id, val)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                      isSelected
+                        ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
+                        : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+                    }`}
+                  >
+                    {val} ({label})
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Banker Financial Exposure Meter */}
@@ -742,17 +793,23 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
             <span className="text-[10px] text-slate-500">Opponents vs Banker</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setTempBetAmount(round.settings.baseBet);
-              setShowBaseBetModal(true);
-            }}
-            className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/70 border border-emerald-800/80 px-2.5 py-1 rounded-lg flex items-center gap-1 transition active:scale-95 shadow-sm"
-          >
-            <span>Base: ${round.settings.baseBet}</span>
-            <span className="text-[10px] text-slate-400 font-normal underline ml-0.5">Change</span>
-          </button>
+          {!isSpectator ? (
+            <button
+              type="button"
+              onClick={() => {
+                setTempBetAmount(round.settings.baseBet);
+                setShowBaseBetModal(true);
+              }}
+              className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/70 border border-emerald-800/80 px-2.5 py-1 rounded-lg flex items-center gap-1 transition active:scale-95 shadow-sm"
+            >
+              <span>Base: ${round.settings.baseBet}</span>
+              <span className="text-[10px] text-slate-400 font-normal underline ml-0.5">Change</span>
+            </button>
+          ) : (
+            <span className="text-[11px] font-semibold text-slate-300 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+              Base: ${round.settings.baseBet}
+            </span>
+          )}
         </div>
 
         {opponents.map((opponent) => {
@@ -823,27 +880,31 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                     <div className="flex items-center gap-1 mt-0.5">
                       <div className="flex items-center gap-1 bg-slate-950/80 px-1.5 py-0.5 rounded-md border border-slate-800 text-[10px]">
                         <span className="text-slate-400 font-medium">Strokes:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustPlayerStrokes(opponent.id, -1)}
-                          disabled={oppStrokes <= 0}
-                          className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-[10px] font-bold active:scale-90 transition"
-                          title="Remove stroke on this hole"
-                        >
-                          -
-                        </button>
+                        {!isSpectator && (
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustPlayerStrokes(opponent.id, -1)}
+                            disabled={oppStrokes <= 0}
+                            className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-[10px] font-bold active:scale-90 transition"
+                            title="Remove stroke on this hole"
+                          >
+                            -
+                          </button>
+                        )}
                         <span className={`font-black min-w-[14px] text-center ${oppStrokes > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
                           {oppStrokes > 0 ? `${oppStrokes} (${'•'.repeat(oppStrokes)})` : '0'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustPlayerStrokes(opponent.id, 1)}
-                          disabled={oppStrokes >= 4}
-                          className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-[10px] font-bold active:scale-90 transition"
-                          title="Add stroke on this hole"
-                        >
-                          +
-                        </button>
+                        {!isSpectator && (
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustPlayerStrokes(opponent.id, 1)}
+                            disabled={oppStrokes >= 4}
+                            className="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white flex items-center justify-center text-[10px] font-bold active:scale-90 transition"
+                            title="Add stroke on this hole"
+                          >
+                            +
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -880,25 +941,32 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                   <span className="text-xs font-bold text-emerald-400">${baseStake}</span>
                 </div>
 
-                <div className="flex gap-1">
-                  {[1, 2, 3, 5, 10, 20].map((amt) => {
-                    const isSelected = baseStake === amt;
-                    return (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => handleSetBet(opponent.id, amt)}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 ${
-                          isSelected
-                            ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                        }`}
-                      >
-                        ${amt}
-                      </button>
-                    );
-                  })}
-                </div>
+                {!isSpectator ? (
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 5, 10, 20].map((amt) => {
+                      const isSelected = baseStake === amt;
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => handleSetBet(opponent.id, amt)}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 ${
+                            isSelected
+                              ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          ${amt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-xs font-bold text-white bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <span>Base Wager:</span>
+                    <span className="text-emerald-400 font-black">${baseStake}</span>
+                  </div>
+                )}
 
                 {/* Live Press / Double (Non-Par 3) & Triple (Par 3) Action */}
                 {(() => {
@@ -938,7 +1006,7 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                       </div>
 
                       {/* Stage: Base (Not Pressed Yet) */}
-                      {pressDetail.stage === 'base' && (
+                      {pressDetail.stage === 'base' && !isSpectator && (
                         <div className="grid grid-cols-2 gap-1.5">
                           <button
                             type="button"
@@ -983,49 +1051,51 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-1">
-                            {/* Double Back / Triple Back Button */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleSetPressStage(
-                                  opponent.id,
-                                  'redoubled',
-                                  pressDetail.lastCaller === 'banker' ? 'opponent' : 'banker'
-                                )
-                              }
-                              className="px-1.5 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/50 text-[10px] font-black flex items-center justify-center gap-0.5 transition active:scale-95 text-center leading-tight"
-                            >
-                              {isPar3
-                                ? `Triple Back (9x: $${baseStake * 9})`
-                                : `Double Back (4x: $${baseStake * 4})`}
-                            </button>
+                          {!isSpectator && (
+                            <div className="grid grid-cols-3 gap-1">
+                              {/* Double Back / Triple Back Button */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSetPressStage(
+                                    opponent.id,
+                                    'redoubled',
+                                    pressDetail.lastCaller === 'banker' ? 'opponent' : 'banker'
+                                  )
+                                }
+                                className="px-1.5 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/50 text-[10px] font-black flex items-center justify-center gap-0.5 transition active:scale-95 text-center leading-tight"
+                              >
+                                {isPar3
+                                  ? `Triple Back (9x: $${baseStake * 9})`
+                                  : `Double Back (4x: $${baseStake * 4})`}
+                              </button>
 
-                            {/* Concede */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleSetPressStage(
-                                  opponent.id,
-                                  'conceded',
-                                  undefined,
-                                  pressDetail.lastCaller === 'banker' ? 'opponent' : 'banker'
-                                )
-                              }
-                              className="px-1.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-semibold flex items-center justify-center transition active:scale-95"
-                            >
-                              Concede (-${baseStake})
-                            </button>
+                              {/* Concede */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSetPressStage(
+                                    opponent.id,
+                                    'conceded',
+                                    undefined,
+                                    pressDetail.lastCaller === 'banker' ? 'opponent' : 'banker'
+                                  )
+                                }
+                                className="px-1.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-semibold flex items-center justify-center transition active:scale-95"
+                              >
+                                Concede (-${baseStake})
+                              </button>
 
-                            {/* Reset */}
-                            <button
-                              type="button"
-                              onClick={() => handleSetPressStage(opponent.id, 'base')}
-                              className="px-1.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 text-[10px] flex items-center justify-center transition"
-                            >
-                              Reset
-                            </button>
-                          </div>
+                              {/* Reset */}
+                              <button
+                                type="button"
+                                onClick={() => handleSetPressStage(opponent.id, 'base')}
+                                className="px-1.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 text-[10px] flex items-center justify-center transition"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1044,30 +1114,32 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleSetPressStage(
-                                  opponent.id,
-                                  'conceded',
-                                  undefined,
-                                  pressDetail.lastCaller === 'banker' ? 'opponent' : 'banker'
-                                )
-                              }
-                              className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold transition active:scale-95"
-                            >
-                              Concede (-${baseStake * (isPar3 ? 3 : 2)})
-                            </button>
+                          {!isSpectator && (
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSetPressStage(
+                                    opponent.id,
+                                    'conceded',
+                                    undefined,
+                                    pressDetail.lastCaller === 'banker' ? 'opponent' : 'banker'
+                                  )
+                                }
+                                className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold transition active:scale-95"
+                              >
+                                Concede (-${baseStake * (isPar3 ? 3 : 2)})
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={() => handleSetPressStage(opponent.id, 'base')}
-                              className="px-2 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 text-[11px] transition"
-                            >
-                              Reset
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                onClick={() => handleSetPressStage(opponent.id, 'base')}
+                                className="px-2 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 text-[11px] transition"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1078,13 +1150,15 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                             🏳️ Conceded (-${pressDetail.concededAmount || baseStake}) by{' '}
                             {pressDetail.concededBy === 'banker' ? banker.name : opponent.name}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSetPressStage(opponent.id, 'base')}
-                            className="text-[11px] text-slate-400 hover:text-white underline"
-                          >
-                            Reset
-                          </button>
+                          {!isSpectator && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPressStage(opponent.id, 'base')}
+                              className="text-[11px] text-slate-400 hover:text-white underline"
+                            >
+                              Reset
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1097,21 +1171,29 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-300 font-semibold">Gross:</span>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleScoreChange(opponent.id, -1)}
-                      className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-sm active:scale-90 transition border border-slate-700"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="w-9 text-center font-black text-lg text-white">
-                      {oppGross !== null && oppGross !== undefined ? oppGross : '-'}
-                    </span>
-                    <button
-                      onClick={() => handleScoreChange(opponent.id, 1)}
-                      className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-sm active:scale-90 transition border border-slate-700"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                    {!isSpectator ? (
+                      <>
+                        <button
+                          onClick={() => handleScoreChange(opponent.id, -1)}
+                          className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-sm active:scale-90 transition border border-slate-700"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-9 text-center font-black text-lg text-white">
+                          {oppGross !== null && oppGross !== undefined ? oppGross : '-'}
+                        </span>
+                        <button
+                          onClick={() => handleScoreChange(opponent.id, 1)}
+                          className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center font-bold text-sm active:scale-90 transition border border-slate-700"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="px-3 py-1 bg-slate-800 rounded-lg border border-slate-700 font-black text-base text-white">
+                        {oppGross !== null && oppGross !== undefined ? oppGross : '-'}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1172,12 +1254,14 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
           <div className="bg-amber-950/40 border-2 border-amber-500/60 rounded-xl p-3 space-y-2 animate-in fade-in">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                <span>🎯</span> Tied for Low Net ({minNetScore})! Select Longest Putt:
+                <span>🎯</span> Tied for Low Net ({minNetScore})! {isSpectator ? 'Longest Putt:' : 'Select Longest Putt:'}
               </span>
               <span className="text-[10px] text-amber-400 font-semibold uppercase">Tiebreaker</span>
             </div>
             <div className="text-[11px] text-slate-300">
-              Who sank the longest putt to take the Bank on Hole {currentHoleNum + 1}?
+              {isSpectator
+                ? `Longest putt tiebreaker to take Bank on Hole ${currentHoleNum + 1}:`
+                : `Who sank the longest putt to take the Bank on Hole ${currentHoleNum + 1}?`}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-1">
               {lowNetTiedPlayers.map(({ player }) => {
@@ -1185,7 +1269,25 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
                   holeData.longestPuttPlayerId === player.id ||
                   (!holeData.longestPuttPlayerId && settlement.nextBankerId === player.id);
 
-                return (
+                return isSpectator ? (
+                  <div
+                    key={player.id}
+                    className={`p-2 rounded-xl text-xs font-bold border flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-md font-black'
+                        : 'bg-slate-800/80 text-slate-400 border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full shrink-0"
+                        style={{ backgroundColor: player.color }}
+                      />
+                      <span className="truncate">{player.name}</span>
+                    </div>
+                    {isSelected && <span className="text-[10px]">👑 (Won Bank)</span>}
+                  </div>
+                ) : (
                   <button
                     key={player.id}
                     type="button"
@@ -1236,7 +1338,8 @@ export const HolePlayView: React.FC<HolePlayViewProps> = ({
               onClick={() => handleGoToHole(currentHoleNum + 1)}
               className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 active:scale-95"
             >
-              Confirm & Next Hole #{currentHoleNum + 1} <ArrowRight className="w-4 h-4" />
+              {isSpectator ? `View Hole #${currentHoleNum + 1}` : `Confirm & Next Hole #${currentHoleNum + 1}`}{' '}
+              <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button

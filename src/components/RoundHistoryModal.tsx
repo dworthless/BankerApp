@@ -1,6 +1,6 @@
 import React from 'react';
 import { RoundState } from '../types';
-import { deleteRoundFromHistory, getRoundHistory } from '../utils/storage';
+import { clearAllRoundHistory, deleteRoundFromHistory, getRoundHistory } from '../utils/storage';
 import { Calendar, History, Trash2, X } from 'lucide-react';
 import { calculatePlayerStats } from '../utils/bankerEngine';
 
@@ -109,7 +109,23 @@ export const RoundHistoryModal: React.FC<RoundHistoryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900 flex justify-end">
+        <div className="p-4 border-t border-slate-800 bg-slate-900 flex items-center justify-between">
+          {history.length > 0 ? (
+            <button
+              onClick={() => {
+                if (window.confirm('Delete all past saved rounds to forget previous matches?')) {
+                  clearAllRoundHistory();
+                  setHistory([]);
+                }
+              }}
+              className="px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-900/50 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" /> Clear All History
+            </button>
+          ) : (
+            <div />
+          )}
+
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
