@@ -28,15 +28,46 @@ export function saveStoredApiKey(key: string): void {
 /**
  * Normalizes course name/location search
  */
+const LEES_SUMMIT_AREA_CITIES = [
+  "lee's summit",
+  'lees summit',
+  'blue springs',
+  'raymore',
+  'belton',
+  'grandview',
+  'independence',
+  'raytown',
+  'leawood',
+  'overland park',
+  'mission hills',
+  'kansas city',
+  'olathe',
+  'lenexa',
+  'parkville',
+  'smithville',
+  'excelsior springs',
+  'loch lloyd',
+];
+
 function matchesQuery(course: GolfCourse, q: string): boolean {
-  const term = q.toLowerCase().trim();
+  const term = q.toLowerCase().trim().replace(/['.]/g, '');
   if (!term) return true;
-  return (
-    course.name.toLowerCase().includes(term) ||
-    course.location.toLowerCase().includes(term) ||
-    (course.clubName && course.clubName.toLowerCase().includes(term)) ||
-    false
-  );
+
+  const locNorm = course.location.toLowerCase().replace(/['.]/g, '');
+  const nameNorm = course.name.toLowerCase().replace(/['.]/g, '');
+  const clubNorm = (course.clubName || '').toLowerCase().replace(/['.]/g, '');
+
+  // Direct match
+  if (nameNorm.includes(term) || locNorm.includes(term) || clubNorm.includes(term)) {
+    return true;
+  }
+
+  // If user searched for Lee's Summit / Lees Summit specifically, match all courses in the 30-mile radius
+  if (term.includes('lees summit') || term.includes('lee summit')) {
+    return LEES_SUMMIT_AREA_CITIES.some((city) => locNorm.includes(city.replace(/['.]/g, '')));
+  }
+
+  return false;
 }
 
 /**

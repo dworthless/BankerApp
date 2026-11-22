@@ -321,4 +321,48 @@ describe('Banker Betting Engine (Custom Personal Rules)', () => {
     expect(decoded?.players.length).toBe(4);
     expect(decoded?.matchCode).toBe(round.matchCode);
   });
+
+  it('contains comprehensive list of golf courses within 30 miles of Lees Summit MO', async () => {
+    const leesSummitResults = await searchGolfCourses("Lee's Summit");
+    expect(leesSummitResults.length).toBeGreaterThanOrEqual(25);
+
+    const expectedCourseNames = [
+      'Fred Arbanas Golf Course',
+      'Shamrock Hills Golf Club',
+      'Adams Pointe Golf Club',
+      'Stone Canyon Golf Club',
+      'Blue Springs Golf Club',
+      'Creekmoor Golf Club',
+      'Loch Lloyd',
+      'Drumm Farm',
+      'Winterstone Golf Course',
+      'Swope Memorial',
+      'Ironhorse Golf Club',
+      'LionsGate',
+      'St. Andrews Golf Club',
+      'Falcon Ridge',
+      'Shoal Creek Golf Course',
+    ];
+
+    expectedCourseNames.forEach((expectedName) => {
+      const found = leesSummitResults.some((c) =>
+        c.name.toLowerCase().includes(expectedName.toLowerCase()) ||
+        (c.clubName && c.clubName.toLowerCase().includes(expectedName.toLowerCase()))
+      );
+      expect(found).toBe(true);
+    });
+
+    // Check that every single course has 18 holes and valid pars and handicap ranks
+    leesSummitResults.forEach((course) => {
+      expect(course.tees.length).toBeGreaterThanOrEqual(1);
+      course.tees.forEach((tee) => {
+        expect(tee.pars.length).toBe(18);
+        expect(tee.handicapRanks.length).toBe(18);
+        tee.pars.forEach((p) => {
+          expect(p).toBeGreaterThanOrEqual(3);
+          expect(p).toBeLessThanOrEqual(5);
+        });
+      });
+    });
+  });
 });

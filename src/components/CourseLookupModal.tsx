@@ -149,10 +149,54 @@ export const CourseLookupModal: React.FC<CourseLookupModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
+          {/* Quick Location Filter Pills */}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-[11px]">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("Lee's Summit");
+                loadCourses("Lee's Summit");
+              }}
+              className="px-2.5 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/70 text-emerald-300 font-bold whitespace-nowrap active:scale-95 transition"
+            >
+              📍 Lee's Summit & Area (&lt;30mi)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('Kansas City');
+                loadCourses('Kansas City');
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-medium whitespace-nowrap active:scale-95 transition"
+            >
+              Kansas City Metro
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('Blue Springs');
+                loadCourses('Blue Springs');
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-medium whitespace-nowrap active:scale-95 transition"
+            >
+              Blue Springs
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                loadCourses('');
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700 border border-slate-700/60 text-slate-400 whitespace-nowrap active:scale-95 transition"
+            >
+              All Courses ({courses.length})
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
             <span className="flex items-center gap-1 text-slate-400">
               <Compass className="w-3.5 h-3.5 text-emerald-400" />
-              {courses.length} courses available
+              {courses.length} courses found
             </span>
 
             <button
